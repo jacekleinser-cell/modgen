@@ -50,12 +50,19 @@ export const analyzeFile = async (fileName: string): Promise<string> => {
     }
 }
 
-export const identifyCurrencies = async (fileName: string): Promise<string[]> => {
+export const identifyCurrencies = async (fileName: string, fileContentSnippet: string = ''): Promise<string[]> => {
     if (!apiKey) return ['Gold', 'Coins'];
 
-    // Specialized prompt to detect currencies based on game name
+    // Specialized prompt to detect currencies based on game name and content
     const prompt = `
-        Based on the filename "${fileName}", what are the likely premium currencies in this game?
+        Target File: "${fileName}"
+        File Content Snippet (First 2KB):
+        """
+        ${fileContentSnippet.slice(0, 2000)}
+        """
+
+        Based on the filename and the provided content snippet, what are the likely premium currencies in this game?
+        Look for keys like "gems", "gold", "coins", "cash", "credits", "diamonds" in the content or filename.
         Return ONLY a comma-separated list of 1-3 items (e.g., "Gems, Gold"). 
         If it's a generic file or unknown, return "Credits, Money".
         Do not write full sentences.

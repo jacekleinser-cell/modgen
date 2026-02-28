@@ -60,6 +60,22 @@ export const Dashboard: React.FC<DashboardProps> = ({ mods, onToggleMod, updateM
     reader.readAsArrayBuffer(file);
   };
 
+  const readFileSnippet = (file: File): Promise<string> => {
+      return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+              const result = e.target?.result;
+              if (typeof result === 'string') {
+                  resolve(result);
+              } else {
+                  resolve('');
+              }
+          };
+          const blob = file.slice(0, 2048);
+          reader.readAsText(blob);
+      });
+  };
+
   const readText = (file: File) => {
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -68,31 +84,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ mods, onToggleMod, updateM
           setGeneratedCode(text);
           setHexDump(''); 
           addLog(`Text file loaded: ${file.name}`, 'success');
-          
-          if (file.name.endsWith('.json')) {
-              try {
-                  const json = JSON.parse(text);
-                  const keys = [];
-                  const traverse = (obj: any) => {
-                      for (const k in obj) {
-                          if (typeof obj[k] === 'number') {
-                              if (['money', 'gold', 'cash', 'coins', 'gems', 'credits', 'balance', 'exp'].some(t => k.toLowerCase().includes(t))) {
-                                  keys.push(k);
-                              }
-                          }
-                          if (typeof obj[k] === 'object' && obj[k] !== null) traverse(obj[k]);
-                      }
-                  }
-                  traverse(json);
-                  if (keys.length > 0) {
-                      addLog(`Detected keys: ${keys.join(', ')}`, 'success');
-                      updateMod('unlimited_currency', { 
-                          name: `Unlimited ${keys.slice(0, 2).join(' & ')}`,
-                          description: `Set ${keys.join(', ')} to 999,999,999`
-                      });
-                  }
-              } catch(e) {}
-          }
       };
       reader.readAsText(file);
   }
@@ -110,6 +101,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ mods, onToggleMod, updateM
     
     if (fileObj) {
         setUploadedFileObj(fileObj);
+        
+        // Read snippet for analysis
+        const snippet = await readFileSnippet(fileObj);
+
         if (file.name.endsWith('.json') || file.name.endsWith('.txt') || file.name.endsWith('.xml') || file.name.endsWith('.plist')) {
             readText(fileObj);
             setActiveTab('preview');
@@ -117,17 +112,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ mods, onToggleMod, updateM
             // Binary Handling (APK, IPA, EXE)
             readHex(fileObj);
             setActiveTab('hex');
-            
-            addLog('Scanning package structure...', 'info');
-            const currencies = await identifyCurrencies(file.name);
-            if (currencies.length > 0) {
-                 const currencyStr = currencies.join(' & ');
-                 addLog(`Economy identified: ${currencyStr}`, 'success');
-                 updateMod('unlimited_currency', { 
-                    name: `Unlimited ${currencyStr}`,
-                    description: `Injects Hex Overrides for ${currencies.join(', ')}`
-                 });
-            }
+        }
+        
+        addLog('Analyzing file content for economy data...', 'info');
+        const currencies = await identifyCurrencies(file.name, snippet);
+        
+        if (currencies.length > 0) {
+             const currencyStr = currencies.join(' & ');
+             addLog(`Economy identified: ${currencyStr}`, 'success');
+             updateMod('unlimited_currency', { 
+                name: `Unlimited ${currencyStr}`,
+                description: `Injects Hex Overrides for ${currencies.join(', ')}`
+             });
         }
     } else {
         // Mock data logic (if any remaining)

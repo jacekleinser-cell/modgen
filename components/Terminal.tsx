@@ -42,7 +42,7 @@ export const Terminal: React.FC<TerminalProps> = ({ logs, isProcessing }) => {
         
         {isProcessing && (
           <div className="text-nexus-accent animate-pulse">
-            > Processing request... <span className="inline-block w-2 h-4 bg-nexus-accent align-middle ml-1 animate-pulse"></span>
+            &gt; Processing request... <span className="inline-block w-2 h-4 bg-nexus-accent align-middle ml-1 animate-pulse"></span>
           </div>
         )}
         <div ref={bottomRef} />
