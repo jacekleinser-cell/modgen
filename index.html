@@ -136,6 +136,13 @@
           active: false,
         },
         {
+          id: 'bypass_security',
+          name: 'Signature Bypass (Anti-Crash)',
+          description: 'Attempts to patch CRC checks and resign the binary to prevent crashing.',
+          category: 'utility',
+          active: false,
+        },
+        {
           id: 'remove_ads',
           name: 'Remove Ads',
           description: 'Disables all interstitial and banner ads',
@@ -263,7 +270,7 @@
                   <div className="w-2 h-2 rounded-full bg-green-500"></div>
                   Modgen_Core_Terminal
               </span>
-              <span className="text-nexus-accent text-xs opacity-50">v2.4.1-stable</span>
+              <span className="text-nexus-accent text-xs opacity-50">v2.4.2-stable</span>
             </div>
             
             <div className="flex-1 p-4 overflow-y-auto space-y-1 relative">
@@ -677,6 +684,9 @@
             return;
           }
 
+          // Check for Security Bypass
+          const bypassActive = activeMods.find(m => m.id === 'bypass_security');
+
           setIsProcessing(true);
           setPatchComplete(false);
           setActiveTab('console');
@@ -715,13 +725,28 @@
                   setProcessStep(3);
                   addLog('Applying binary overrides to logic modules...', 'info');
                   
+                  if (bypassActive) {
+                      addLog('Bypassing Integrity Checks (CRC32/MD5)...', 'warning');
+                      await wait(400);
+                      addLog('Patching Signature Verification Header...', 'warning');
+                      await wait(400);
+                      addLog('Anti-Tamper Bypass: SUCCESS', 'success');
+                  } else {
+                      addLog('WARNING: Signature Bypass NOT active.', 'error');
+                      addLog('Game may crash on launch due to integrity checks.', 'error');
+                      addLog('Enable "Signature Bypass" mod to prevent this.', 'info');
+                  }
+
                   setProcessStep(4);
                   addLog('Repacking container and updating directory headers...', 'info');
                   await wait(500);
                   
                   setProcessStep(5);
-                  addLog('Warning: Signature invalid. Install using Scarlet/AltStore/ESign.', 'warning');
-                  addLog('Container Ready. Output valid for sideloading.', 'success');
+                  if (!bypassActive) {
+                      addLog('Warning: Signature invalid. Install using Scarlet/AltStore/ESign.', 'warning');
+                  } else {
+                      addLog('Container Resigned (Self-Signed). Ready for sideload.', 'success');
+                  }
                   
                   setPatchComplete(true);
                   setActiveTab('console'); 
